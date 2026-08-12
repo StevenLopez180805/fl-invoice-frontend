@@ -7,7 +7,8 @@ interface ExpenseSummaryCardProps {
 const currencyFormatter = new Intl.NumberFormat('es-CO', {
   style: 'currency',
   currency: 'COP',
-  maximumFractionDigits: 0,
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
 })
 
 export function ExpenseSummaryCard({ expense }: ExpenseSummaryCardProps) {
