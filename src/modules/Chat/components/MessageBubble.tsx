@@ -17,7 +17,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         }`}
       >
         {message.attachment && (
-          <p className="mb-1 text-xs font-medium opacity-80">📎 {message.attachment.name}</p>
+          <p className="mb-1 text-xs font-medium opacity-80">{message.attachment.name}</p>
         )}
         {message.content}
       </div>

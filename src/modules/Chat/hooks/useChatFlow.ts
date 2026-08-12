@@ -1,10 +1,10 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useChatStore } from '../store/chatStore'
 import { ChatState } from '../types'
 import { toChatMessage, toChatMessageWithId, toChatState } from '../services/mappers'
 import { useSendMessageQuery } from './useSendMessageQuery'
 import { useUploadReceiptQuery } from './useUploadReceiptQuery'
-import { useSaveExpenseQuery } from './useSaveExpenseQuery'
 import { useStartConversationQuery } from './useStartConversationQuery'
 
 export function useChatFlow() {
@@ -16,27 +16,37 @@ export function useChatFlow() {
   const setConversationId = useChatStore((s) => s.setConversationId)
   const setState = useChatStore((s) => s.setState)
   const addMessage = useChatStore((s) => s.addMessage)
-  const setMessages = useChatStore((s) => s.setMessages)
   const appendMessages = useChatStore((s) => s.appendMessages)
-  const documentNumber = useChatStore((s) => s.documentNumber)
   const setDocumentNumber = useChatStore((s) => s.setDocumentNumber)
   const setExpenseDraft = useChatStore((s) => s.setExpenseDraft)
   const setPendingFile = useChatStore((s) => s.setPendingFile)
   const reset = useChatStore((s) => s.reset)
 
-  const startConversationQuery = useStartConversationQuery(!conversationId)
+  const [hasTriggeredStart, setHasTriggeredStart] = useState(false)
+
+  const queryClient = useQueryClient()
+  const startConversationQuery = useStartConversationQuery(hasTriggeredStart && !conversationId)
   const sendMessageQuery = useSendMessageQuery()
   const uploadReceiptQuery = useUploadReceiptQuery()
-  const saveExpenseQuery = useSaveExpenseQuery()
 
   useEffect(() => {
     const conversation = startConversationQuery.data
     if (!conversation || conversationId) return
 
     setConversationId(conversation.id)
-    setMessages(conversation.message.map(toChatMessage))
+    appendMessages(conversation.message.map(toChatMessage))
     setState(toChatState(conversation.state))
-  }, [startConversationQuery.data, conversationId, setConversationId, setMessages, setState])
+  }, [startConversationQuery.data, conversationId, setConversationId, appendMessages, setState])
+
+  const startConversation = useCallback(
+    (value: string) => {
+      if (conversationId || hasTriggeredStart || !value.trim()) return
+
+      addMessage({ role: 'user', content: value })
+      setHasTriggeredStart(true)
+    },
+    [conversationId, hasTriggeredStart, addMessage],
+  )
 
   const sendDocumentNumber = useCallback(
     async (value: string) => {
@@ -108,72 +118,85 @@ export function useChatFlow() {
 
   const confirmExpense = useCallback(
     async (accepted: boolean) => {
-      if (state !== ChatState.CONFIRMING_EXPENSE) return
+      if (state !== ChatState.CONFIRMING_EXPENSE || !conversationId) return
 
-      addMessage({ role: 'user', content: accepted ? 'Sí' : 'No' })
+      const content = accepted ? 'SI' : 'NO'
+      addMessage({ role: 'user', content })
 
-      if (!accepted) {
-        setExpenseDraft(null)
-        addMessage({
-          role: 'bot',
-          content: 'Entendido, por favor adjunta mejores fotos de la factura.',
-        })
-        setState(ChatState.WAITING_RECEIPT)
-        return
-      }
-
-      if (!expenseDraft || !documentNumber) return
-
-      const { data } = await saveExpenseQuery.save({
-        documentNumber,
-        data: expenseDraft,
-      })
+      const { data, error } = await sendMessageQuery.send({ conversationId, content })
 
       if (data) {
-        addMessage({ role: 'bot', content: 'Factura guardada correctamente ✅' })
-        setExpenseDraft(null)
-        addMessage({ role: 'bot', content: '¿Deseas subir otra factura?' })
-        setState(ChatState.ASKING_ANOTHER_RECEIPT)
+        data.messages
+          .filter((message) => message.role === 'BOT')
+          .forEach((message) => addMessage({ role: 'bot', content: message.content }))
+
+        const nextState = toChatState(data.state)
+        if (nextState !== ChatState.CONFIRMING_EXPENSE) {
+          setExpenseDraft(null)
+        }
+        setState(nextState)
       } else {
         addMessage({
           role: 'bot',
-          content: 'No fue posible guardar la factura. Confirmemos de nuevo.',
+          content:
+            error instanceof Error
+              ? error.message
+              : 'No fue posible confirmar la factura. Intenta de nuevo.',
         })
       }
     },
-    [state, addMessage, setExpenseDraft, setState, expenseDraft, documentNumber, saveExpenseQuery],
+    [state, conversationId, addMessage, setExpenseDraft, setState, sendMessageQuery],
   )
 
   const confirmAnotherReceipt = useCallback(
-    (accepted: boolean) => {
-      if (state !== ChatState.ASKING_ANOTHER_RECEIPT) return
+    async (accepted: boolean) => {
+      if (state !== ChatState.ASKING_ANOTHER_RECEIPT || !conversationId) return
 
-      addMessage({ role: 'user', content: accepted ? 'Sí' : 'No' })
+      const content = accepted ? 'SI' : 'NO'
+      addMessage({ role: 'user', content })
 
-      if (accepted) {
-        addMessage({ role: 'bot', content: 'Perfecto, adjunta la nueva factura.' })
-        setState(ChatState.WAITING_RECEIPT)
+      const { data, error } = await sendMessageQuery.send({ conversationId, content })
+
+      if (data) {
+        data.messages
+          .filter((message) => message.role === 'BOT')
+          .forEach((message) => addMessage({ role: 'bot', content: message.content }))
+        setState(toChatState(data.state))
       } else {
-        addMessage({ role: 'bot', content: '¡Gracias! Conversación finalizada.' })
-        setState(ChatState.COMPLETED)
+        addMessage({
+          role: 'bot',
+          content:
+            error instanceof Error
+              ? error.message
+              : 'No fue posible continuar. Intenta de nuevo.',
+        })
       }
     },
-    [state, addMessage, setState],
+    [state, conversationId, addMessage, setState, sendMessageQuery],
   )
+
+  const startNewConversation = useCallback(() => {
+    queryClient.removeQueries({ queryKey: ['conversations', 'start'] })
+    reset()
+    setHasTriggeredStart(false)
+  }, [queryClient, reset])
 
   return {
     conversationId,
     state,
     messages,
     expenseDraft,
-    isStartingConversation: !conversationId,
+    awaitingStart: !conversationId && !hasTriggeredStart,
+    isStartingConversation: hasTriggeredStart && !conversationId,
     isValidatingDocument: sendMessageQuery.isFetching,
     isProcessingReceipt: uploadReceiptQuery.isFetching,
-    isSavingExpense: saveExpenseQuery.isFetching,
+    isConfirmingExpense: sendMessageQuery.isFetching,
+    isAskingAnotherReceipt: sendMessageQuery.isFetching,
+    startConversation,
     sendDocumentNumber,
     attachReceipt,
     confirmExpense,
     confirmAnotherReceipt,
-    startNewConversation: reset,
+    startNewConversation,
   }
 }

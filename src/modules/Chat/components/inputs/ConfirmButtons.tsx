@@ -8,14 +8,14 @@ export function ConfirmButtons({ onConfirm }: ConfirmButtonsProps) {
       <button
         type="button"
         onClick={() => onConfirm(true)}
-        className="rounded-full bg-purple-600 px-6 py-2 text-sm font-medium text-white"
+        className="rounded-full bg-purple-600 px-6 py-2 text-sm font-medium text-white cursor-pointer"
       >
         Sí
       </button>
       <button
         type="button"
         onClick={() => onConfirm(false)}
-        className="rounded-full border border-gray-300 px-6 py-2 text-sm font-medium text-gray-700"
+        className="rounded-full border border-gray-300 px-6 py-2 text-sm font-medium text-gray-700 cursor-pointer"
       >
         No
       </button>

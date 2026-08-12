@@ -62,14 +62,14 @@ export function FileUploadInput({ onConfirm }: FileUploadInputProps) {
           <button
             type="button"
             onClick={handleConfirm}
-            className="rounded-full bg-purple-600 px-5 py-2 text-sm font-medium text-white"
+            className="rounded-full bg-purple-600 px-5 py-2 text-sm font-medium text-white cursor-pointer"
           >
             Enviar factura
           </button>
           <button
             type="button"
             onClick={() => setFile(null)}
-            className="rounded-full border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700"
+            className="rounded-full border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700 cursor-pointer"
           >
             Elegir otra
           </button>
@@ -91,9 +91,9 @@ export function FileUploadInput({ onConfirm }: FileUploadInputProps) {
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="rounded-full bg-purple-600 px-5 py-2 text-sm font-medium text-white"
+        className="rounded-full bg-purple-600 px-5 py-2 text-sm font-medium text-white cursor-pointer"
       >
-        📎 Adjuntar factura
+      Adjuntar factura
       </button>
     </div>
   )

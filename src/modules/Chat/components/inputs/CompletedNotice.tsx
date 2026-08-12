@@ -9,7 +9,7 @@ export function CompletedNotice({ onRestart }: CompletedNoticeProps) {
       <button
         type="button"
         onClick={onRestart}
-        className="rounded-full bg-purple-600 px-5 py-2 text-sm font-medium text-white"
+        className="rounded-full bg-purple-600 px-5 py-2 text-sm font-medium text-white cursor-pointer"
       >
         Iniciar nueva conversación
       </button>

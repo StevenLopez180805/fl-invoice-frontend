@@ -1,5 +1,6 @@
 import { ChatState } from '../types'
 import type { useChatFlow } from '../hooks/useChatFlow'
+import { StartChatInput } from './inputs/StartChatInput'
 import { NumericInput } from './inputs/NumericInput'
 import { FileUploadInput } from './inputs/FileUploadInput'
 import { ConfirmButtons } from './inputs/ConfirmButtons'
@@ -13,6 +14,10 @@ interface ChatInputAreaProps {
 }
 
 export function ChatInputArea({ flow }: ChatInputAreaProps) {
+  if (flow.awaitingStart) {
+    return <StartChatInput onSubmit={flow.startConversation} />
+  }
+
   if (flow.isStartingConversation) {
     return <LoadingIndicator label="Iniciando conversación..." />
   }
@@ -33,14 +38,18 @@ export function ChatInputArea({ flow }: ChatInputAreaProps) {
       )
 
     case ChatState.CONFIRMING_EXPENSE:
-      return flow.isSavingExpense ? (
-        <LoadingIndicator label="Guardando factura..." />
+      return flow.isConfirmingExpense ? (
+        <LoadingIndicator label="Confirmando factura..." />
       ) : (
         <ConfirmButtons onConfirm={flow.confirmExpense} />
       )
 
     case ChatState.ASKING_ANOTHER_RECEIPT:
-      return <ConfirmButtons onConfirm={flow.confirmAnotherReceipt} />
+      return flow.isAskingAnotherReceipt ? (
+        <LoadingIndicator label="Enviando respuesta..." />
+      ) : (
+        <ConfirmButtons onConfirm={flow.confirmAnotherReceipt} />
+      )
 
     case ChatState.COMPLETED:
       return <CompletedNotice onRestart={flow.startNewConversation} />

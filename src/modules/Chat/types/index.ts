@@ -28,11 +28,6 @@ export interface ExtractedExpense {
   date: string
 }
 
-export interface SavedExpense extends ExtractedExpense {
-  documentNumber: string
-  savedAt: string
-}
-
 export type BackendMessageRole = 'BOT' | 'USER'
 
 export interface BackendMessage {

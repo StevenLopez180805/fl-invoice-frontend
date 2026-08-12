@@ -1,14 +1,10 @@
 import { useState, type FormEvent } from 'react'
 
-interface NumericInputProps {
-  readonly placeholder?: string
+interface StartChatInputProps {
   readonly onSubmit: (value: string) => void
 }
 
-export function NumericInput({
-  placeholder = 'Número de documento',
-  onSubmit,
-}: NumericInputProps) {
+export function StartChatInput({ onSubmit }: StartChatInputProps) {
   const [value, setValue] = useState('')
 
   const handleSubmit = (event: FormEvent) => {
@@ -22,11 +18,9 @@ export function NumericInput({
     <form onSubmit={handleSubmit} className="flex gap-2 border-t border-gray-200 p-3">
       <input
         type="text"
-        inputMode="numeric"
-        pattern="[0-9]*"
         value={value}
-        onChange={(e) => setValue(e.target.value.replace(/\D/g, ''))}
-        placeholder={placeholder}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Escribe un mensaje para comenzar, ej: Hola"
         className="flex-1 rounded-full border border-gray-300 px-4 py-2 text-sm outline-none focus:border-purple-500"
         autoFocus
       />
